@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import java.util.List;
 import java.util.Map;
 
-@FeignClient(name = "service-rendezvous", url = "${clients.rendezvous.url:http://localhost:8084}")
+@FeignClient(name = "service-rendezvous", url = "${clients.rendezvous.url:http://localhost:8083}")
 public interface RendezVousBatchClient {
 
     @GetMapping("/api/v1/appointments")

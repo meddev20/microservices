@@ -7,6 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
+import java.util.concurrent.CompletableFuture;
+
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -19,19 +21,23 @@ public class PraticiensKafkaProducer {
 
     public void sendSlotReserved(SlotReservedEvent event) {
         log.info("Publication sur {}: {}", TOPIC_SLOT_RESERVED, event);
-        try {
-            kafkaTemplate.send(TOPIC_SLOT_RESERVED, String.valueOf(event.getAppointmentId()), event);
-        } catch (Exception e) {
-            log.warn("Erreur envoi Kafka (topic {}): {}", TOPIC_SLOT_RESERVED, e.getMessage());
-        }
+        CompletableFuture.runAsync(() -> {
+            try {
+                kafkaTemplate.send(TOPIC_SLOT_RESERVED, String.valueOf(event.getAppointmentId()), event);
+            } catch (Exception e) {
+                log.warn("Erreur envoi Kafka (topic {}): {}", TOPIC_SLOT_RESERVED, e.getMessage());
+            }
+        });
     }
 
     public void sendSlotRejected(SlotRejectedEvent event) {
         log.info("Publication sur {}: {}", TOPIC_SLOT_REJECTED, event);
-        try {
-            kafkaTemplate.send(TOPIC_SLOT_REJECTED, String.valueOf(event.getAppointmentId()), event);
-        } catch (Exception e) {
-            log.warn("Erreur envoi Kafka (topic {}): {}", TOPIC_SLOT_REJECTED, e.getMessage());
-        }
+        CompletableFuture.runAsync(() -> {
+            try {
+                kafkaTemplate.send(TOPIC_SLOT_REJECTED, String.valueOf(event.getAppointmentId()), event);
+            } catch (Exception e) {
+                log.warn("Erreur envoi Kafka (topic {}): {}", TOPIC_SLOT_REJECTED, e.getMessage());
+            }
+        });
     }
 }

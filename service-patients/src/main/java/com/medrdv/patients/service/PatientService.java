@@ -29,6 +29,12 @@ public class PatientService {
 
     @Transactional
     public Patient createPatient(Patient patient) {
+        if (patient.getNumeroSecu() != null) {
+            Optional<Patient> existing = patientRepository.findByNumeroSecu(patient.getNumeroSecu());
+            if (existing.isPresent()) {
+                return existing.get();
+            }
+        }
         return patientRepository.save(patient);
     }
 

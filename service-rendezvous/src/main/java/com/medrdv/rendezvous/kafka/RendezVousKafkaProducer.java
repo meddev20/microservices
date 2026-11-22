@@ -9,6 +9,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
+import java.util.concurrent.CompletableFuture;
+
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -23,37 +25,45 @@ public class RendezVousKafkaProducer {
 
     public void sendAppointmentRequested(AppointmentRequestedEvent event) {
         log.info("Émission topic {}: {}", TOPIC_APPOINTMENT_REQUESTED, event);
-        try {
-            kafkaTemplate.send(TOPIC_APPOINTMENT_REQUESTED, String.valueOf(event.getAppointmentId()), event);
-        } catch (Exception e) {
-            log.warn("Erreur envoi Kafka (topic {}): {}", TOPIC_APPOINTMENT_REQUESTED, e.getMessage());
-        }
+        CompletableFuture.runAsync(() -> {
+            try {
+                kafkaTemplate.send(TOPIC_APPOINTMENT_REQUESTED, String.valueOf(event.getAppointmentId()), event);
+            } catch (Exception e) {
+                log.warn("Erreur envoi Kafka (topic {}): {}", TOPIC_APPOINTMENT_REQUESTED, e.getMessage());
+            }
+        });
     }
 
     public void sendAppointmentBooked(AppointmentBookedEvent event) {
         log.info("Émission topic {}: {}", TOPIC_APPOINTMENT_BOOKED, event);
-        try {
-            kafkaTemplate.send(TOPIC_APPOINTMENT_BOOKED, String.valueOf(event.getAppointmentId()), event);
-        } catch (Exception e) {
-            log.warn("Erreur envoi Kafka (topic {}): {}", TOPIC_APPOINTMENT_BOOKED, e.getMessage());
-        }
+        CompletableFuture.runAsync(() -> {
+            try {
+                kafkaTemplate.send(TOPIC_APPOINTMENT_BOOKED, String.valueOf(event.getAppointmentId()), event);
+            } catch (Exception e) {
+                log.warn("Erreur envoi Kafka (topic {}): {}", TOPIC_APPOINTMENT_BOOKED, e.getMessage());
+            }
+        });
     }
 
     public void sendAppointmentCancelled(AppointmentCancelledEvent event) {
         log.info("Émission topic {}: {}", TOPIC_APPOINTMENT_CANCELLED, event);
-        try {
-            kafkaTemplate.send(TOPIC_APPOINTMENT_CANCELLED, String.valueOf(event.getAppointmentId()), event);
-        } catch (Exception e) {
-            log.warn("Erreur envoi Kafka (topic {}): {}", TOPIC_APPOINTMENT_CANCELLED, e.getMessage());
-        }
+        CompletableFuture.runAsync(() -> {
+            try {
+                kafkaTemplate.send(TOPIC_APPOINTMENT_CANCELLED, String.valueOf(event.getAppointmentId()), event);
+            } catch (Exception e) {
+                log.warn("Erreur envoi Kafka (topic {}): {}", TOPIC_APPOINTMENT_CANCELLED, e.getMessage());
+            }
+        });
     }
 
     public void sendConsultationCompleted(ConsultationCompletedEvent event) {
         log.info("Émission topic {}: {}", TOPIC_CONSULTATION_COMPLETED, event);
-        try {
-            kafkaTemplate.send(TOPIC_CONSULTATION_COMPLETED, String.valueOf(event.getAppointmentId()), event);
-        } catch (Exception e) {
-            log.warn("Erreur envoi Kafka (topic {}): {}", TOPIC_CONSULTATION_COMPLETED, e.getMessage());
-        }
+        CompletableFuture.runAsync(() -> {
+            try {
+                kafkaTemplate.send(TOPIC_CONSULTATION_COMPLETED, String.valueOf(event.getAppointmentId()), event);
+            } catch (Exception e) {
+                log.warn("Erreur envoi Kafka (topic {}): {}", TOPIC_CONSULTATION_COMPLETED, e.getMessage());
+            }
+        });
     }
 }
