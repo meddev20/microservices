@@ -1,0 +1,79 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  config:
+    import: "optional:configserver:http://localhost:8888/"
+
+  data:
+    redis:
+      host: ${SPRING_REDIS_HOST:localhost}
+      port: ${SPRING_REDIS_PORT:6379}
+
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      routes:
+        # Route vers service-rendezvous
+        - id: rendezvous-service
+          uri: lb://service-rendezvous
+          predicates:
+            - Path=/api/v1/appointments/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                key-resolver: "#{@ipKeyResolver}"
+
+        # Route vers service-praticiens
+        - id: praticiens-service
+          uri: lb://service-praticiens
+          predicates:
+            - Path=/api/v1/doctors/**, /api/v1/availabilities/**
+
+        # Route vers service-patients
+        - id: patients-service
+          uri: lb://service-patients
+          predicates:
+            - Path=/api/v1/patients/**, /api/v1/medical-records/**
+
+        # Route vers service-notification
+        - id: notification-service
+          uri: lb://service-notification
+          predicates:
+            - Path=/api/v1/notifications/**
+
+        # Route vers service-batch-analytics
+        - id: batch-analytics-service
+          uri: lb://service-batch-analytics
+          predicates:
+            - Path=/api/v1/batch/**
+
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:8761/eureka/}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway

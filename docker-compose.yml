@@ -1,0 +1,100 @@
+version: '3.8'
+
+services:
+  # Multi-database PostgreSQL instance
+  postgres:
+    image: postgres:16-alpine
+    container_name: medrdv-postgres
+    environment:
+      POSTGRES_USER: medrdv_user
+      POSTGRES_PASSWORD: medrdv_password
+      POSTGRES_MULTIPLE_DATABASES: praticiens_db,patients_db,rendezvous_db,notifications_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh
+    networks:
+      - medrdv-net
+
+  # Apache Kafka in KRaft mode (no Zookeeper required)
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: medrdv-kafka
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:29093'
+      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:29092,CONTROLLER://0.0.0.0:29093,PLAINTEXT_HOST://0.0.0.0:9092'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
+      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
+    volumes:
+      - kafkadata:/var/lib/kafka/data
+    networks:
+      - medrdv-net
+
+  # Kafka UI for visual event inspection
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: medrdv-kafka-ui
+    ports:
+      - "8085:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: medrdv-cluster
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+    depends_on:
+      - kafka
+    networks:
+      - medrdv-net
+
+  # Redis for API Gateway rate-limiting & caching
+  redis:
+    image: redis:7-alpine
+    container_name: medrdv-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - medrdv-net
+
+  # RabbitMQ for asynchronous notifications (Jalon V5)
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: medrdv-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - medrdv-net
+
+  # MailHog for testing asynchronous emails from service-notification
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: medrdv-mailhog
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # Web UI
+    networks:
+      - medrdv-net
+
+networks:
+  medrdv-net:
+    driver: bridge
+
+volumes:
+  pgdata:
+  kafkadata:
+
