@@ -5,6 +5,8 @@ import com.medrdv.notification.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -20,6 +22,12 @@ public class NotificationController {
     @GetMapping
     public ResponseEntity<List<NotificationRecord>> getNotificationHistory() {
         return ResponseEntity.ok(emailService.getNotificationHistory());
+    }
+
+    @PostMapping
+    public ResponseEntity<Void> triggerNotification(@RequestBody NotificationRecord record) {
+        emailService.sendEmail(record.getRecipient(), record.getSubject(), record.getContent(), record.getType());
+        return ResponseEntity.ok().build();
     }
 }
 

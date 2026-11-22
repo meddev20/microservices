@@ -71,6 +71,12 @@ public class ResilientRequests {
         return praticiensClient.getAvailabilityById(id);
     }
 
+    @Retry(name = "service-praticiens", fallbackMethod = "creneauDeRepli")
+    @CircuitBreaker(name = "service-praticiens")
+    public AvailabilityDTO getAvailabilityByIdFb(Long id) {
+        return praticiensClient.getAvailabilityById(id);
+    }
+
     // --- Méthodes de Repli (Fallbacks) ---
 
     public PatientDTO patientIndisponible(Long id, Throwable t) {
@@ -109,6 +115,19 @@ public class ResilientRequests {
     public AvailabilityDTO slotIndisponible(Long id, Throwable t) {
         log.error("Échec strict créneau ID {}: {}", id, t.getMessage());
         throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Service des créneaux temporairement indisponible");
+    }
+
+    public AvailabilityDTO creneauDeRepli(Long id, Throwable t) {
+        log.warn("Repli consultation : créneau indisponible pour ID {}", id);
+        return null;
+    }
+
+    public AvailabilityDTO reserveSlotDirect(Long slotId, Long doctorId) {
+        return praticiensClient.reserveSlot(slotId, doctorId);
+    }
+
+    public MedicalRecordDTO updateMedicalRecordDirect(MedicalRecordDTO record) {
+        return patientsClient.updateMedicalRecord(record);
     }
 
     private void cachePatient(Long id, PatientDTO p) {

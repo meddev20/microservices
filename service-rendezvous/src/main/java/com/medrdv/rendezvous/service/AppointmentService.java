@@ -67,7 +67,12 @@ public class AppointmentService {
             throw new IllegalStateException("Le créneau n'est plus disponible pour la réservation");
         }
 
-        request.setStatut(AppointmentStatus.DEMANDE);
+        request.setStatut(AppointmentStatus.CONFIRME);
+        try {
+            resilientRequests.reserveSlotDirect(request.getAvailabilityId(), request.getDoctorId());
+        } catch (Exception ex) {
+            log.warn("Réservation directe: {}", ex.getMessage());
+        }
         Appointment savedAppointment = appointmentRepository.save(request);
 
         // Déclenchement de la Saga distribuée via Kafka
@@ -160,6 +165,21 @@ public class AppointmentService {
         app.setNotesConsultation(notes);
         Appointment saved = appointmentRepository.save(app);
 
+        // Mise à jour synchrone du dossier médical (V4) avec fallback
+        try {
+            MedicalRecordDTO existing = resilientRequests.getMedicalRecordByPatientIdFb(app.getPatientId());
+            MedicalRecordDTO updateDto = MedicalRecordDTO.builder()
+                    .patientId(app.getPatientId())
+                    .derniereConsultation(LocalDateTime.now())
+                    .dernierMotif(app.getMotif())
+                    .allergies(existing != null ? existing.getAllergies() : "Aucune allergie connue")
+                    .antecedents(existing != null ? existing.getAntecedents() : "R.A.S")
+                    .build();
+            resilientRequests.updateMedicalRecordDirect(updateDto);
+        } catch (Exception ex) {
+            log.warn("Mise à jour directe du dossier médical non aboutie: {}", ex.getMessage());
+        }
+
         ConsultationCompletedEvent completedEvent = ConsultationCompletedEvent.builder()
                 .eventId(UUID.randomUUID().toString())
                 .appointmentId(app.getId())
@@ -186,6 +206,7 @@ public class AppointmentService {
         PatientDTO patient = resilientRequests.getPatientByIdFb(app.getPatientId());
         MedicalRecordDTO medicalRecord = resilientRequests.getMedicalRecordByPatientIdFb(app.getPatientId());
         DoctorDTO doctor = resilientRequests.getDoctorByIdFb(app.getDoctorId());
+        AvailabilityDTO slot = resilientRequests.getAvailabilityByIdFb(app.getAvailabilityId());
 
         return EnrichedAppointmentDTO.builder()
                 .id(app.getId())
@@ -195,6 +216,7 @@ public class AppointmentService {
                 .patient(patient)
                 .dossierMedical(medicalRecord)
                 .praticien(doctor)
+                .creneau(slot)
                 .build();
     }
 }

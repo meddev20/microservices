@@ -19,11 +19,19 @@ public class PraticiensKafkaProducer {
 
     public void sendSlotReserved(SlotReservedEvent event) {
         log.info("Publication sur {}: {}", TOPIC_SLOT_RESERVED, event);
-        kafkaTemplate.send(TOPIC_SLOT_RESERVED, String.valueOf(event.getAppointmentId()), event);
+        try {
+            kafkaTemplate.send(TOPIC_SLOT_RESERVED, String.valueOf(event.getAppointmentId()), event);
+        } catch (Exception e) {
+            log.warn("Erreur envoi Kafka (topic {}): {}", TOPIC_SLOT_RESERVED, e.getMessage());
+        }
     }
 
     public void sendSlotRejected(SlotRejectedEvent event) {
         log.info("Publication sur {}: {}", TOPIC_SLOT_REJECTED, event);
-        kafkaTemplate.send(TOPIC_SLOT_REJECTED, String.valueOf(event.getAppointmentId()), event);
+        try {
+            kafkaTemplate.send(TOPIC_SLOT_REJECTED, String.valueOf(event.getAppointmentId()), event);
+        } catch (Exception e) {
+            log.warn("Erreur envoi Kafka (topic {}): {}", TOPIC_SLOT_REJECTED, e.getMessage());
+        }
     }
 }

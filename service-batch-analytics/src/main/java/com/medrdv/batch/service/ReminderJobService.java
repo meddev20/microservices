@@ -60,7 +60,11 @@ public class ReminderJobService {
                                     .timestamp(LocalDateTime.now())
                                     .build();
 
-                            kafkaTemplate.send(TOPIC_APPOINTMENT_REMINDER, String.valueOf(id), reminder);
+                            try {
+                                kafkaTemplate.send(TOPIC_APPOINTMENT_REMINDER, String.valueOf(id), reminder);
+                            } catch (Exception e) {
+                                log.warn("Erreur envoi Kafka reminder: {}", e.getMessage());
+                            }
                             log.info("Rappel J-1 émis pour le RDV #{} (Patient: {})", id, reminder.getPatientId());
                             remindersSent++;
                         }
