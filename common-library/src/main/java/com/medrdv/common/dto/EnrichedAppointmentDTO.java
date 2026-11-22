@@ -26,5 +26,3 @@ public class EnrichedAppointmentDTO {
     private DoctorDTO praticien;
     private AvailabilityDTO creneau;
 }
-
-n

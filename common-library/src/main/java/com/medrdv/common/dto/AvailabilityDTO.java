@@ -1,4 +1,4 @@
-tipackage com.medrdv.common.dto;
+package com.medrdv.common.dto;
 
 import com.medrdv.common.enums.SlotStatus;
 import lombok.AllArgsConstructor;
