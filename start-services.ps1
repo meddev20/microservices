@@ -1,4 +1,4 @@
-﻿$JAVA_BIN = "C:\Program Files\Java\jdk-17.0.5\bin\java.exe"
+$JAVA_BIN = "C:\Program Files\Java\jdk-17.0.5\bin\java.exe"
 $LOG_DIR = "$PSScriptRoot\logs"
 New-Item -ItemType Directory -Force -Path $LOG_DIR | Out-Null
 

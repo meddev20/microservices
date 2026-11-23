@@ -1,4 +1,4 @@
-﻿# Script de Test End-to-End pour Med-RDV (via API Gateway port 8080)
+# Script de Test End-to-End pour Med-RDV (via API Gateway port 8080)
 
 $GATEWAY = "http://localhost:8080"
 
