@@ -1,8 +1,12 @@
-# 🏥 Med-RDV — Plateforme Complète Intégrée (Jalons V1 à V7)
+# 🏥 Med-RDV — Plateforme Complète Intégrée (Jalons V0 à V7)
 
 Architecture unifiée de prise de rendez-vous médicaux multi-praticiens avec **Spring Boot 3**, **Spring Cloud**, **Apache Kafka**, **RabbitMQ**, **Resilience4j** et **PostgreSQL**.
 
-Toutes les exigences des **Jalons V1 à V7** (Dr. Salim KHALIL) sont intégrées directement au cœur des microservices du projet.
+Toutes les exigences des **Jalons V0 à V7** (Dr. Salim KHALIL - Fiche de suivi d'évaluation) sont intégrées directement au cœur des microservices du projet.
+
+> 📖 **Dossier de Conception Officiel V0 & V1 :** Voir [CONCEPTION_V0_V1.md](file:///c:/Users/Abdessamad/Desktop/ai_story/rendez-vous%20medcin/CONCEPTION_V0_V1.md) pour les diagrammes de classes Mermaid, l'architecture globale cohérente et les résultats détaillés des tests CRUD.
+>
+> 🧪 **Lancer les tests V1 CRUD :** `powershell -ExecutionPolicy Bypass -File test-v1-crud.ps1`
 
 ---
 
@@ -13,9 +17,9 @@ Toutes les exigences des **Jalons V1 à V7** (Dr. Salim KHALIL) sont intégrées
 | **`eureka-server`** | **8761** | Registre de découverte Netflix Eureka (`@EnableEurekaServer`) | **Jalon V2** |
 | **`config-server`** | **8888** | Serveur de configuration centralisé (`config-repo/`) | **Jalon V3** |
 | **`api-gateway`** | **8080** | Passerelle réactive avec routage dynamique/statique & Rate Limiter Redis | **Jalon V2, V6** |
-| **`service-praticiens`** | **8081** | Gestion des praticiens et réservation atomique des créneaux (Optimistic/Pessimistic lock) | **Jalon V1, V4, V7** |
-| **`service-patients`** | **8082** | Gestion des patients et dossier médical (mise à jour chronologique sans écrasement) | **Jalon V1, V7** |
-| **`service-rendezvous`** ⭐ | **8083** | Cœur métier, OpenFeign, Resilience4j (`ResilientRequests`, Cache Caffeine, RateLimiter), Saga Kafka | **Jalon V4, V5, V6, V7** |
+| **`service-praticiens`** | **8081** | Gestion des praticiens et réservation atomique des créneaux (Optimistic lock) | **Jalon V0, V1, V4, V7** |
+| **`service-patients`** | **8082** | Gestion des patients et dossier médical (mise à jour chronologique sans écrasement) | **Jalon V0, V1, V7** |
+| **`service-rendezvous`** ⭐ | **8083** | Cœur métier, OpenFeign, Resilience4j (`ResilientRequests`, Cache Caffeine, RateLimiter), Saga Kafka | **Jalon V0, V4, V5, V6, V7** |
 | **`service-notification`** | **8084** | Consommateur Kafka & RabbitMQ, envoi asynchrone d'emails via SMTP (MailHog) | **Jalon V5, V7** |
 | **`service-batch-analytics`** | **8085** | Jobs `@Scheduled` : rappels J-1 de consultation et export CSV mensuel par spécialité | **Bonus** |
 
@@ -23,9 +27,14 @@ Toutes les exigences des **Jalons V1 à V7** (Dr. Salim KHALIL) sont intégrées
 
 ## 🧩 Détail des Compétences Jalons Intégrées
 
-1. **Jalon V1 (CRUD Fonctionnel) :**
-   - Entités `Doctor`, `Availability` dans `service-praticiens`.
-   - Entités `Patient`, `MedicalRecord` dans `service-patients`.
+0. **Jalon V0 (Conception & Documentation) :**
+   - **Architecture générale cohérente :** Découplage microservices, passerelle Spring Cloud Gateway, registre Eureka, Config Server.
+   - **Diagramme de classes métier :** Modélisation complète dans `CONCEPTION_V0_V1.md` (`Doctor`, `Availability`, `Patient`, `MedicalRecord`, `Appointment`, enums).
+   - **Git et documentation à jour :** Dépôt GitHub maintenu, documentation détaillée avec instructions de test.
+1. **Jalon V1 (Implémentation Métier & BDD) :**
+   - **Services, couches et BDD isolées :** Architecture 3-tiers (Controller, Service, Repository, Entity, DTO) avec bases séparées.
+   - **CRUD et validations métier :** `@Valid`, `@NotBlank`, `@Email`, réservations atomiques, contrôles d'unicité.
+   - **Tests API initiaux :** Suite automatisée `test-v1-crud.ps1` validée à 100%.
 2. **Jalon V2 (Eureka & Gateway) :**
    - Tous les services sont annotés Eureka Client et s'enregistrent sur `http://localhost:8761/`.
    - `api-gateway` (Port 8080) gère le routage dynamique (`/service-id/**`) et les routes directes (`/api/v1/**`).

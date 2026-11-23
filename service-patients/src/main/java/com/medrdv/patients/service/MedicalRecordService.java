@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -19,6 +20,19 @@ public class MedicalRecordService {
 
     public Optional<MedicalRecord> getMedicalRecordByPatientId(Long patientId) {
         return medicalRecordRepository.findByPatientId(patientId);
+    }
+
+    public List<MedicalRecord> getAllMedicalRecords() {
+        return medicalRecordRepository.findAll();
+    }
+
+    public Optional<MedicalRecord> getMedicalRecordById(Long id) {
+        return medicalRecordRepository.findById(id);
+    }
+
+    @Transactional
+    public void deleteMedicalRecord(Long id) {
+        medicalRecordRepository.deleteById(id);
     }
 
     @Transactional
