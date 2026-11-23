@@ -11,56 +11,145 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Gestionnaire d'exceptions global et centralisé (Jalon V6 - Résilience)
+ * Intercepte et formate toutes les erreurs de l'application sous forme de réponses JSON cohérentes.
+ */
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(ServiceExterneIndisponibleException.class)
-    public ResponseEntity<String> handleServiceExterneIndisponible(ServiceExterneIndisponibleException ex) {
-        log.error("Service externe indisponible: {}", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(ex.getMessage());
-    }
-
-    @ExceptionHandler(CallNotPermittedException.class)
-    public ResponseEntity<String> handleCallNotPermitted(CallNotPermittedException ex) {
-        log.warn("Circuit Breaker ouvert : {}", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                .body("Le service distant est temporairement inaccessible (Circuit Breaker ouvert).");
-    }
-
-    @ExceptionHandler(RequestNotPermitted.class)
-    public ResponseEntity<String> handleRateLimiter(RequestNotPermitted ex) {
-        log.warn("RateLimiter déclenché : {}", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
-                .body("Trop de requêtes simultanées. Veuillez réessayer dans quelques instants.");
-    }
-
+    /**
+     * Erreur de validation des champs DTO / Entity (@Valid) -> HTTP 400 Bad Request
+     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, String>> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        Map<String, String> errors = new HashMap<>();
-        ex.getBindingResult().getAllErrors().forEach((error) -> {
-            String fieldName = ((FieldError) error).getField();
-            String errorMessage = error.getDefaultMessage();
-            errors.put(fieldName, errorMessage);
-        });
-        return ResponseEntity.badRequest().body(errors);
+    public ResponseEntity<Map<String, Object>> handleValidationExceptions(MethodArgumentNotValidException ex) {
+        Map<String, String> fieldErrors = new HashMap<>();
+        for (FieldError error : ex.getBindingResult().getFieldErrors()) {
+            fieldErrors.put(error.getField(), error.getDefaultMessage());
+        }
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.BAD_REQUEST.value());
+        body.put("error", "Erreur de validation");
+        body.put("details", fieldErrors);
+
+        log.warn("Validation échouée : {}", fieldErrors);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<Map<String, String>> handleIllegalArgument(IllegalArgumentException ex) {
-        return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+    /**
+     * Repli strict : Service distant indisponible (Jalon V6) -> HTTP 503 Service Unavailable
+     */
+    @ExceptionHandler(ServiceExterneIndisponibleException.class)
+    public ResponseEntity<Map<String, Object>> handleServiceExterneIndisponible(ServiceExterneIndisponibleException ex) {
+        log.error("Service distant indisponible (repli strict) : {}", ex.getMessage());
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.SERVICE_UNAVAILABLE.value());
+        body.put("error", "Service Indisponible");
+        body.put("message", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(body);
     }
 
+    /**
+     * Circuit Breaker ouvert (Resilience4j) -> HTTP 503 Service Unavailable
+     */
+    @ExceptionHandler(CallNotPermittedException.class)
+    public ResponseEntity<Map<String, Object>> handleCircuitBreakerOpen(CallNotPermittedException ex) {
+        log.warn("Circuit Breaker ouvert : {}", ex.getMessage());
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.SERVICE_UNAVAILABLE.value());
+        body.put("error", "Circuit Breaker Ouvert");
+        body.put("message", "Le service distant cible est temporairement coupé pour protection.");
+
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(body);
+    }
+
+    /**
+     * RateLimiter dépassé (Resilience4j) -> HTTP 429 Too Many Requests
+     */
+    @ExceptionHandler(RequestNotPermitted.class)
+    public ResponseEntity<Map<String, Object>> handleRateLimiter(RequestNotPermitted ex) {
+        log.warn("Dépassement du Rate Limiter : {}", ex.getMessage());
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.TOO_MANY_REQUESTS.value());
+        body.put("error", "Trop de requêtes");
+        body.put("message", "Quota de requêtes dépassé. Veuillez patienter avant de réessayer.");
+
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(body);
+    }
+
+    /**
+     * Conflit d'état (ex: créneau déjà réservé) -> HTTP 409 Conflict
+     */
     @ExceptionHandler(IllegalStateException.class)
-    public ResponseEntity<Map<String, String>> handleIllegalState(IllegalStateException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", ex.getMessage()));
+    public ResponseEntity<Map<String, Object>> handleIllegalState(IllegalStateException ex) {
+        log.warn("Conflit métier : {}", ex.getMessage());
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.CONFLICT.value());
+        body.put("error", "Conflit");
+        body.put("message", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
     }
 
+    /**
+     * Argument incorrect ou ressource introuvable -> HTTP 400 ou 404
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, Object>> handleIllegalArgument(IllegalArgumentException ex) {
+        log.warn("Argument invalide : {}", ex.getMessage());
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.BAD_REQUEST.value());
+        body.put("error", "Mauvaise requête");
+        body.put("message", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    /**
+     * Gestion des exceptions ResponseStatusException
+     */
     @ExceptionHandler(ResponseStatusException.class)
-    public ResponseEntity<String> handleResponseStatus(ResponseStatusException ex) {
-        return ResponseEntity.status(ex.getStatusCode()).body(ex.getReason());
+    public ResponseEntity<Map<String, Object>> handleResponseStatus(ResponseStatusException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", ex.getStatusCode().value());
+        body.put("error", ex.getReason());
+        body.put("message", ex.getReason());
+
+        return ResponseEntity.status(ex.getStatusCode()).body(body);
+    }
+
+    /**
+     * Erreur générique inattendue -> HTTP 500
+     */
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
+        log.error("Erreur serveur inattendue : ", ex);
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
+        body.put("error", "Erreur Interne du Serveur");
+        body.put("message", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }
 }
