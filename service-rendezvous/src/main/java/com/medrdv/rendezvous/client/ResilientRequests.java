@@ -6,7 +6,6 @@ import com.medrdv.common.dto.MedicalRecordDTO;
 import com.medrdv.common.dto.PatientDTO;
 import com.medrdv.rendezvous.exception.ServiceExterneIndisponibleException;
 import feign.FeignException;
-import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
@@ -18,7 +17,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * Enveloppe résiliente des appels Feign (Jalon V6 - Dr. Salim KHALIL)
- * Intègre : Timeouts, Retry, Circuit Breaker, Bulkhead, Cache Caffeine et Repli strict (503).
+ * Intègre : Timeouts, Retry, Circuit Breaker, Cache Caffeine et Repli strict (503).
  */
 @Component
 @RequiredArgsConstructor
@@ -38,7 +37,6 @@ public class ResilientRequests {
      */
     @Retry(name = "service-patients", fallbackMethod = "patientIndisponible")
     @CircuitBreaker(name = "service-patients")
-    @Bulkhead(name = "service-patients")
     public PatientDTO getPatientByIdStrict(Long id) {
         PatientDTO patient = patientsClient.getPatientById(id);
         cachePatient(id, patient);
@@ -50,7 +48,6 @@ public class ResilientRequests {
      */
     @Retry(name = "service-patients", fallbackMethod = "patientDeRepli")
     @CircuitBreaker(name = "service-patients")
-    @Bulkhead(name = "service-patients")
     public PatientDTO getPatientByIdFb(Long id) {
         PatientDTO patient = patientsClient.getPatientById(id);
         cachePatient(id, patient);
@@ -59,7 +56,6 @@ public class ResilientRequests {
 
     @Retry(name = "service-patients", fallbackMethod = "dossierDeRepli")
     @CircuitBreaker(name = "service-patients")
-    @Bulkhead(name = "service-patients")
     public MedicalRecordDTO getMedicalRecordByPatientIdFb(Long patientId) {
         return patientsClient.getMedicalRecordByPatientId(patientId);
     }
@@ -73,7 +69,6 @@ public class ResilientRequests {
      */
     @Retry(name = "service-praticiens", fallbackMethod = "praticienIndisponible")
     @CircuitBreaker(name = "service-praticiens")
-    @Bulkhead(name = "service-praticiens")
     public DoctorDTO getDoctorByIdStrict(Long id) {
         DoctorDTO doctor = praticiensClient.getDoctorById(id);
         cacheDoctor(id, doctor);
@@ -85,7 +80,6 @@ public class ResilientRequests {
      */
     @Retry(name = "service-praticiens", fallbackMethod = "praticienDeRepli")
     @CircuitBreaker(name = "service-praticiens")
-    @Bulkhead(name = "service-praticiens")
     public DoctorDTO getDoctorByIdFb(Long id) {
         DoctorDTO doctor = praticiensClient.getDoctorById(id);
         cacheDoctor(id, doctor);
@@ -97,7 +91,6 @@ public class ResilientRequests {
      */
     @Retry(name = "service-praticiens", fallbackMethod = "slotIndisponible")
     @CircuitBreaker(name = "service-praticiens")
-    @Bulkhead(name = "service-praticiens")
     public AvailabilityDTO getAvailabilityByIdStrict(Long id) {
         return praticiensClient.getAvailabilityById(id);
     }
@@ -107,7 +100,6 @@ public class ResilientRequests {
      */
     @Retry(name = "service-praticiens", fallbackMethod = "creneauDeRepli")
     @CircuitBreaker(name = "service-praticiens")
-    @Bulkhead(name = "service-praticiens")
     public AvailabilityDTO getAvailabilityByIdFb(Long id) {
         return praticiensClient.getAvailabilityById(id);
     }
@@ -153,7 +145,7 @@ public class ResilientRequests {
         if (cache != null && cache.get(id) != null) {
             return (PatientDTO) cache.get(id).get();
         }
-        return new PatientDTO(id, null, null, null, null, null, null);
+        return PatientDTO.builder().id(id).build();
     }
 
     public MedicalRecordDTO dossierDeRepli(Long patientId, Throwable t) {
@@ -173,7 +165,7 @@ public class ResilientRequests {
         if (cache != null && cache.get(id) != null) {
             return (DoctorDTO) cache.get(id).get();
         }
-        return new DoctorDTO(id, null, null, null, null, null);
+        return DoctorDTO.builder().id(id).build();
     }
 
     public AvailabilityDTO creneauDeRepli(Long id, Throwable t) {

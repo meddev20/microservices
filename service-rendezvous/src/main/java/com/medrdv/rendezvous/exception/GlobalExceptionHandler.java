@@ -1,7 +1,6 @@
 package com.medrdv.rendezvous.exception;
 
 import feign.FeignException;
-import io.github.resilience4j.bulkhead.BulkheadFullException;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.ratelimiter.RequestNotPermitted;
 import lombok.extern.slf4j.Slf4j;
@@ -73,22 +72,6 @@ public class GlobalExceptionHandler {
         body.put("status", HttpStatus.SERVICE_UNAVAILABLE.value());
         body.put("error", "Circuit Breaker Ouvert");
         body.put("message", "Le service distant cible est temporairement coupé pour protection.");
-
-        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(body);
-    }
-
-    /**
-     * Bulkhead saturé (Resilience4j BulkheadFullException TP §2 & §4.7) -> HTTP 503 Service Unavailable
-     */
-    @ExceptionHandler(BulkheadFullException.class)
-    public ResponseEntity<Map<String, Object>> handleBulkheadFull(BulkheadFullException ex) {
-        log.warn("Bulkhead saturé : {}", ex.getMessage());
-
-        Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", LocalDateTime.now());
-        body.put("status", HttpStatus.SERVICE_UNAVAILABLE.value());
-        body.put("error", "Service Surchargé (Bulkhead)");
-        body.put("message", "Nombre maximum d'appels simultanés atteint pour le service distant. Réessayez.");
 
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(body);
     }
